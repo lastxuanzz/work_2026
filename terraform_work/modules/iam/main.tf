@@ -142,11 +142,22 @@ resource "aws_iam_role_policy" "role_4_p" {
   role = aws_iam_role.role_4.arn
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow",
-      Action   = "s3:GetObject",
-      Resource = "*"
-    }]
+    Statement = [
+      {
+        Effect   = "Allow",
+        Action   = "s3:GetObject",
+        Resource = "*"
+      },
+      {
+        "Effect" : "Allow",
+        "Action" : [ # 确认中
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ],
+        "Resource" : "arn:aws:logs:*:*:*" # CloudWatch Logsへのアクセス許可
+      }
+    ]
   })
 }
 
