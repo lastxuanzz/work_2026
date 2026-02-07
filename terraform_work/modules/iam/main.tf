@@ -39,7 +39,7 @@ resource "aws_iam_role" "role_1" {
 
 resource "aws_iam_role_policy" "role_1_p" {
   name = var.role_1_policy_name
-  role = aws_iam_role.role_1.id
+  role = aws_iam_role.role_1.arn
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -53,7 +53,7 @@ resource "aws_iam_role_policy" "role_1_p" {
       },
       {
         Effect   = "Allow",
-        Action   = ["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey"],
+        Action   = ["kms:Decrypt", "kms:GenerateDataKey"],
         Resource = var.kms_key_arn
       }
     ]
@@ -75,7 +75,7 @@ resource "aws_iam_role" "role_2" {
 
 resource "aws_iam_role_policy" "role_2_p" {
   name = var.role_2_policy_name
-  role = aws_iam_role.role_2.id
+  role = aws_iam_role.role_2.arn
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -113,7 +113,7 @@ resource "aws_iam_role" "role_3" {
 
 resource "aws_iam_role_policy" "role_3_p" {
   name = var.role_3_policy_name
-  role = aws_iam_role.role_3.id
+  role = aws_iam_role.role_3.arn
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -139,7 +139,7 @@ resource "aws_iam_role" "role_4" {
 
 resource "aws_iam_role_policy" "role_4_p" {
   name = var.role_4_policy_name
-  role = aws_iam_role.role_4.id
+  role = aws_iam_role.role_4.arn
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -165,7 +165,7 @@ resource "aws_iam_role" "role_5" {
 
 resource "aws_iam_role_policy" "role_5_p" {
   name = var.role_5_policy_name
-  role = aws_iam_role.role_5.id
+  role = aws_iam_role.role_5.arn
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -203,7 +203,7 @@ resource "aws_iam_role" "role_6" {
 
 resource "aws_iam_role_policy" "role_6_p" {
   name = var.role_6_policy_name
-  role = aws_iam_role.role_6.id
+  role = aws_iam_role.role_6.arn
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
