@@ -13,7 +13,7 @@ for r in a:
 
 print(a)
 ```
-~~~
+
 ```python
 
 ```
