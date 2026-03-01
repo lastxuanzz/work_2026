@@ -15,27 +15,77 @@ print(a)
 ```
 ~~~
 ```python
-A = [
-    {"syscode":"AAA","env":"dev","uuid":"111"},
-    {"syscode":"BBB","env":"test","uuid":"222"},
-]
-B = [
-    {"syscode":"AAA","env":"dev","uuid":"111"},
-    {"syscode":"CCC","env":"prod","uuid":"333"},
-]
+A = [{"syscode": "AAA", "env": "dev", "uuid": "111"},
+     {"syscode": "BBB", "env": "dev", "uuid": "222"},
+     {"syscode": "CCC", "env": "dev", "uuid": "333"}]
+B = [{"SystemCde": "AAA", "setting_key": "111", "Env": "dev"},
+     {"SystemCde": "BBB", "setting_key": "222", "Env": "dev"},
+     {"SystemCde": "CCC", "setting_key": "333", "Env": "prod"},
+     {"SystemCde": "DDD", "setting_key": "444", "Env": "dev"}]
 
-# 先把 uuid 抽成集合
-uuidsA = {d["uuid"] for d in A}
-uuidsB = {d["uuid"] for d in B}
+# 字段映射（A字段名 -> B字段名）
+field_map = {
+    "syscode": "SystemCde",
+    "uuid": "setting_key",
+    "env": "Env"          # 用于比较的额外字段
+}
 
-common_ids   = uuidsA & uuidsB      # 两边都有
-only_in_B_ids = uuidsB - uuidsA     # 只在 B
-only_in_A_ids = uuidsA - uuidsB     # 只在 A
+key_fields = ["syscode", "uuid"]   # 作为唯一键的字段
 
-# 再用这些 id 去过滤原列表，保留完整字典
-A_and_B    = [d for d in A if d["uuid"] in common_ids]
-in_B_not_A = [d for d in B if d["uuid"] in only_in_B_ids]
-in_A_not_B = [d for d in A if d["uuid"] in only_in_A_ids]
+def make_key(item, source='A'):
+    """生成标准化键（元组）"""
+    if source == 'A':
+        return tuple(item[f] for f in key_fields)
+    else:  # B
+        return tuple(item[field_map[f]] for f in key_fields)
+
+# 构建键到原始字典的映射
+dictA = {make_key(d, 'A'): d for d in A}
+dictB = {make_key(d, 'B'): d for d in B}
+
+
+keysA = set(dictA.keys())
+keysB = set(dictB.keys())
+print("dictA:", keysA)
+print("dictB:", keysB)
+
+common_keys = keysA & keysB
+only_A_keys = keysA - keysB
+only_B_keys = keysB - keysA
+
+# 需要比较的非键字段（排除键字段后的映射）
+compare_fields = [(fA, fB) for fA, fB in field_map.items() if fA not in key_fields]
+
+inconsistent = []
+only_in_A = []
+only_in_B = []
+
+# 处理键相同的记录，检查一致性
+for key in common_keys:
+    a_dict = dictA[key]
+    b_dict = dictB[key]
+    is_consistent = True
+    for fA, fB in compare_fields:
+        if a_dict.get(fA) != b_dict.get(fB):
+            is_consistent = False
+            break
+    if not is_consistent:
+        syscode, uuid = key
+        inconsistent.append({"syscode": syscode, "uuid": uuid})
+
+# 处理仅存在于A的记录
+for key in only_A_keys:
+    syscode, uuid = key
+    only_in_A.append({"syscode": syscode, "uuid": uuid})
+
+# 处理仅存在于B的记录
+for key in only_B_keys:
+    syscode, uuid = key
+    only_in_B.append({"syscode": syscode, "uuid": uuid})
+
+print("not equal:", inconsistent)
+print("only in A:", only_in_A)
+print("only in B:", only_in_B)
 ```
 ### 发送请求
 ```python
