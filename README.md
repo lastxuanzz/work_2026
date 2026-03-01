@@ -1,5 +1,20 @@
 ### 整合数据
 ```python
+a=[
+    {"col1": "11", "col2": "12", "col3": ""},
+    {"col1": "21", "col2": "other", "col3": "23"},
+    {"col1": "31", "col2": "32", "col3": ""},
+]
+
+for r in a:
+    if r.get("col2") == "other":
+        r["col2"] = r.get("col3") # type: ignore
+    r.pop("col3", None)
+
+print(a)
+```
+~~~
+```python
 A = [
     {"syscode":"AAA","env":"dev","uuid":"111"},
     {"syscode":"BBB","env":"test","uuid":"222"},
