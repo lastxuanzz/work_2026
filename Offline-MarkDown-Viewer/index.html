@@ -15,49 +15,110 @@
         .header {
             background: #24292f; padding: 12px 20px; display: flex; align-items: center;
             position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            gap: 10px;
         }
         .btn {
             padding: 6px 14px; border: none; border-radius: 6px; 
-            color: white; cursor: pointer; font-size: 13px; font-weight: 600; margin-right: 10px;
+            color: white; cursor: pointer; font-size: 13px; font-weight: 600;
             display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;
+            background-color: #2da44e;
         }
         .btn-upload { background-color: #2da44e; }
         .btn-upload:hover { background-color: #2c974b; }
         .btn-clear { background-color: #6e7781; }
         .btn-clear:hover { background-color: #57606a; }
+        .btn-delete { background-color: #6e7781; }
+        .btn-delete:hover { background-color: #57606a; }
+        .btn-clear-content { background-color: #6e7781; }  /* 清空按钮同色 */
+        .btn-clear-content:hover { background-color: #57606a; }
+        .btn-clear-all-content { background-color: #6e7781; } /* 顶部清空所有内容按钮 */
+        .btn-clear-all-content:hover { background-color: #57606a; }
         
-        .file-info { color: #adb5bd; font-size: 13px; border-left: 1px solid #444; padding-left: 15px; margin-left: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-grow: 1; }
+        .file-count {
+            color: #adb5bd; font-size: 13px; border-left: 1px solid #444; padding-left: 15px;
+            margin-left: 5px; flex-grow: 1;
+        }
         
         .lang-selector {
             background-color: #31363c; color: white; border: 1px solid #444;
             border-radius: 4px; padding: 4px 8px; font-size: 12px; cursor: pointer;
-            margin-left: 15px; outline: none;
+            outline: none;
         }
 
         input[type="file"] { display: none; }
         
-        .markdown-body {
-            max-width: 900px; margin: 30px auto; padding: 45px;
-            background: #fff; border-radius: 6px; border: 1px solid #d0d7de;
-            min-height: 80vh;
+        #content {
+            max-width: 900px; margin: 30px auto; padding: 0 20px;
         }
+
+        .file-card {
+            background: #fff;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 12px 16px;
+            background-color: #f6f8fa;
+            border-bottom: 1px solid #d0d7de;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* 折叠按钮样式 */
+        .fold-btn {
+            cursor: pointer;
+            font-size: 14px;
+            width: 20px;
+            text-align: center;
+            user-select: none;
+            color: #57606a;
+        }
+        .fold-btn:hover {
+            color: #24292f;
+        }
+
+        .card-filename {
+            flex: 1;
+            font-size: 13px;
+            color: #24292f;
+            word-break: break-word;
+        }
+
+        .card-content {
+            padding: 16px;
+            border: none;
+            margin: 0;
+            max-width: 100%;
+            transition: all 0.2s;
+        }
+        .card-content.collapsed {
+            display: none;
+        }
+
         .empty-text { text-align: center; color: #6e7781; margin-top: 150px; }
-        @media (max-width: 767px) { .markdown-body { padding: 15px; margin: 10px; } }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <label for="file-upload" class="btn btn-upload">
-            <span id="txt-btn-upload">📂 选择文件</span>
-        </label>
-        <input id="file-upload" type="file" accept=".md,.txt" />
-        
-        <button id="btn-clear" class="btn btn-clear">
-            <span id="txt-btn-clear">🗑️ 清空内容</span>
+        <button id="btn-add" class="btn btn-upload">
+            <span id="txt-btn-add">➕ 添加文件</span>
         </button>
         
-        <span id="file-name" class="file-info">未读取任何文件</span>
+        <button id="btn-clear-all-content" class="btn btn-clear-all-content">
+            <span id="txt-btn-clear-all-content">🧹 清空所有内容</span>
+        </button>
+
+        <button id="btn-clear-all" class="btn btn-clear">
+            <span id="txt-btn-clear-all">🗑️ 删除全部</span>
+        </button>
+        
+        <span id="file-count" class="file-count">0 个文件</span>
 
         <select id="lang-select" class="lang-selector">
             <option value="zh">简体中文</option>
@@ -66,56 +127,73 @@
         </select>
     </div>
 
-    <article id="content" class="markdown-body"></article>
+    <div id="content" class="markdown-body" style="background:transparent; border:none; padding:0;"></div>
 
     <script src="./marked.min.js"></script>
     <script src="./highlight.min.js"></script>
     
     <script>
+        // 国际化资源
         const i18n = {
             zh: {
                 title: "离线 Markdown 阅读器",
+                addFile: "➕ 添加文件",
+                clearAllContent: "🧹 清空所有内容",
+                clearAll: "🗑️ 删除全部",
                 upload: "📂 选择文件",
-                clear: "🗑️ 清空内容",
-                noFile: "未读取任何文件",
-                currentFile: "当前文件: ",
+                clear: "🧹 清空",
+                delete: "🗑️ 删除",
+                defaultFilename: "未选择文件",
+                fileCount: (n) => `${n} 个文件`,
                 welcomeTitle: "欢迎使用离线 Markdown 查看器",
-                welcomeSub: "请点击左上角按钮载入本地文件"
+                welcomeSub: "点击「添加文件」按钮开始"
             },
             en: {
                 title: "Offline Markdown Viewer",
+                addFile: "➕ Add File",
+                clearAllContent: "🧹 Clear All Content",
+                clearAll: "🗑️ Delete All",
                 upload: "📂 Open File",
-                clear: "🗑️ Clear",
-                noFile: "No file selected",
-                currentFile: "File: ",
+                clear: "🧹 Clear",
+                delete: "🗑️ Delete",
+                defaultFilename: "No file selected",
+                fileCount: (n) => `${n} file${n !== 1 ? 's' : ''}`,
                 welcomeTitle: "Welcome to Markdown Viewer",
-                welcomeSub: "Click the button to load a file"
+                welcomeSub: "Click 'Add File' to start"
             },
             ja: {
                 title: "オフライン Markdown ビューア",
+                addFile: "➕ ファイル追加",
+                clearAllContent: "🧹 すべての内容をクリア",
+                clearAll: "🗑️ すべて削除",
                 upload: "📂 ファイルを選択",
-                clear: "🗑️ 内容をクリア",
-                noFile: "ファイルが選択されていません",
-                currentFile: "現在のファイル: ",
+                clear: "🧹 クリア",
+                delete: "🗑️ 削除",
+                defaultFilename: "ファイル未選択",
+                fileCount: (n) => `${n} ファイル`,
                 welcomeTitle: "オフライン Markdown ビューアへようこそ",
-                welcomeSub: "左上のボタンからファイルを読み込んでください"
+                welcomeSub: "「ファイル追加」ボタンをクリックしてください"
             }
         };
 
-        const fileUpload = document.getElementById('file-upload');
-        const fileNameSpan = document.getElementById('file-name');
-        const contentArea = document.getElementById('content');
-        const btnClear = document.getElementById('btn-clear');
+        // DOM 元素
+        const btnAdd = document.getElementById('btn-add');
+        const btnClearAllContent = document.getElementById('btn-clear-all-content');
+        const btnClearAll = document.getElementById('btn-clear-all');
+        const fileCountSpan = document.getElementById('file-count');
         const langSelect = document.getElementById('lang-select');
-        
-        const txtBtnUpload = document.getElementById('txt-btn-upload');
-        const txtBtnClear = document.getElementById('txt-btn-clear');
+        const contentArea = document.getElementById('content');
+        const txtBtnAdd = document.getElementById('txt-btn-add');
+        const txtBtnClearAllContent = document.getElementById('txt-btn-clear-all-content');
+        const txtBtnClearAll = document.getElementById('txt-btn-clear-all');
 
         let currentLang = localStorage.getItem('md-viewer-lang') || 'zh';
-        let currentFileName = "";
-        let isFileLoaded = false; // 标记是否已经加载了文件
+        let cardCounter = 0;
 
-        // 初始化配置 Marked
+        // 卡片顶部距离视窗顶部的固定偏移量
+        const CARD_TOP_OFFSET = 100;
+
+        // 初始化 Marked 配置
         marked.setOptions({
             highlight: function(code, lang) {
                 const language = hljs.getLanguage(lang) ? lang : 'plaintext';
@@ -123,24 +201,182 @@
             }
         });
 
-        function updateInterface() {
+        // ========== 辅助函数 ==========
+        function updateUILanguage() {
             const t = i18n[currentLang];
-            
-            // 更新标题和按钮文字
             document.title = t.title;
-            txtBtnUpload.textContent = t.upload;
-            txtBtnClear.textContent = t.clear;
+            txtBtnAdd.textContent = t.addFile;
+            txtBtnClearAllContent.textContent = t.clearAllContent;
+            txtBtnClearAll.textContent = t.clearAll;
             langSelect.value = currentLang;
 
-            // 更新文件名显示
-            if (!currentFileName) {
-                fileNameSpan.textContent = t.noFile;
-            } else {
-                fileNameSpan.textContent = t.currentFile + currentFileName;
-            }
+            // 更新所有卡片的文字
+            document.querySelectorAll('.file-card').forEach(card => {
+                const uploadLabel = card.querySelector('.card-upload');
+                const clearBtn = card.querySelector('.btn-clear-content');
+                const deleteBtn = card.querySelector('.btn-delete');
+                const filenameSpan = card.querySelector('.card-filename');
+                if (uploadLabel) uploadLabel.textContent = t.upload;
+                if (clearBtn) clearBtn.textContent = t.clear;
+                if (deleteBtn) deleteBtn.textContent = t.delete;
+                // 如果卡片未选择文件，重置默认文件名
+                if (card.dataset.fileSelected !== 'true') {
+                    filenameSpan.textContent = t.defaultFilename;
+                }
+            });
 
-            // 如果当前没有加载文件，则显示对应语言的欢迎语
-            if (!isFileLoaded) {
+            updateFileCount();
+        }
+
+        function updateFileCount() {
+            const count = document.querySelectorAll('.file-card').length;
+            fileCountSpan.textContent = i18n[currentLang].fileCount(count);
+        }
+
+        // 清空单个卡片的内容
+        function clearCardContent(card) {
+            const t = i18n[currentLang];
+            const filenameSpan = card.querySelector('.card-filename');
+            const contentDiv = card.querySelector('.card-content');
+            const fileInput = card.querySelector('.card-file-input');
+            
+            filenameSpan.textContent = t.defaultFilename;
+            contentDiv.innerHTML = '';
+            if (fileInput) fileInput.value = ''; // 清空文件输入
+            card.dataset.fileSelected = 'false';
+        }
+
+        // 添加新卡片
+        function addCard() {
+            const t = i18n[currentLang];
+            const cardId = cardCounter++;
+
+            // 创建卡片
+            const card = document.createElement('div');
+            card.className = 'file-card';
+            card.dataset.fileSelected = 'false';
+
+            // 头部
+            const header = document.createElement('div');
+            header.className = 'card-header';
+
+            // 折叠按钮
+            const foldBtn = document.createElement('span');
+            foldBtn.className = 'fold-btn';
+            foldBtn.textContent = '▼'; // 默认展开
+            foldBtn.setAttribute('data-folded', 'false');
+
+            // 上传按钮
+            const uploadLabel = document.createElement('label');
+            uploadLabel.htmlFor = `file-input-${cardId}`;
+            uploadLabel.className = 'btn btn-upload card-upload';
+            uploadLabel.textContent = t.upload;
+
+            // 文件输入
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.id = `file-input-${cardId}`;
+            fileInput.className = 'card-file-input';
+            fileInput.accept = '.md,.txt';
+            fileInput.style.display = 'none';
+
+            // 文件名显示
+            const filenameSpan = document.createElement('span');
+            filenameSpan.className = 'card-filename';
+            filenameSpan.textContent = t.defaultFilename;
+
+            // 清空按钮
+            const clearBtn = document.createElement('button');
+            clearBtn.className = 'btn btn-clear-content';
+            clearBtn.textContent = t.clear;
+
+            // 删除按钮
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn btn-delete';
+            deleteBtn.textContent = t.delete;
+
+            // 组装头部
+            header.appendChild(foldBtn);
+            header.appendChild(uploadLabel);
+            header.appendChild(fileInput);
+            header.appendChild(filenameSpan);
+            header.appendChild(clearBtn);
+            header.appendChild(deleteBtn);
+
+            // 内容区
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'markdown-body card-content';
+
+            card.appendChild(header);
+            card.appendChild(contentDiv);
+
+            contentArea.appendChild(card);
+
+            // 滚动到新卡片
+            setTimeout(() => {
+                const targetScroll = card.offsetTop - CARD_TOP_OFFSET;
+                window.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
+            }, 10);
+
+            // ===== 事件绑定 =====
+            // 折叠/展开
+            foldBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isFolded = foldBtn.getAttribute('data-folded') === 'true';
+                if (isFolded) {
+                    contentDiv.classList.remove('collapsed');
+                    foldBtn.textContent = '▼';
+                    foldBtn.setAttribute('data-folded', 'false');
+                } else {
+                    contentDiv.classList.add('collapsed');
+                    foldBtn.textContent = '▶';
+                    foldBtn.setAttribute('data-folded', 'true');
+                }
+            });
+
+            // 文件选择
+            fileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    filenameSpan.textContent = file.name;
+                    contentDiv.innerHTML = marked.parse(event.target.result);
+                    card.dataset.fileSelected = 'true';
+
+                    // 如果卡片不在视窗内，滚动到固定偏移量
+                    const rect = card.getBoundingClientRect();
+                    const isVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
+                    if (!isVisible) {
+                        const targetScroll = card.offsetTop - CARD_TOP_OFFSET;
+                        window.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
+                    }
+                };
+                reader.readAsText(file);
+            });
+
+            // 清空按钮
+            clearBtn.addEventListener('click', () => {
+                clearCardContent(card);
+            });
+
+            // 删除卡片
+            deleteBtn.addEventListener('click', () => {
+                card.remove();
+                updateFileCount();
+                if (document.querySelectorAll('.file-card').length === 0) {
+                    showEmptyState();
+                }
+            });
+
+            updateFileCount();
+        }
+
+        // 显示空状态
+        function showEmptyState() {
+            const t = i18n[currentLang];
+            if (document.querySelectorAll('.file-card').length === 0) {
                 contentArea.innerHTML = `
                     <div class="empty-text">
                         <h2>${t.welcomeTitle}</h2>
@@ -149,40 +385,52 @@
             }
         }
 
-        // 文件上传逻辑
-        fileUpload.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+        // 清空所有卡片的内容
+        function clearAllCardsContent() {
+            document.querySelectorAll('.file-card').forEach(card => {
+                clearCardContent(card);
+            });
+        }
 
-            currentFileName = file.name;
-            isFileLoaded = true;
-            
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                contentArea.innerHTML = marked.parse(event.target.result);
-                updateInterface(); // 更新文件名显示
-                window.scrollTo(0, 0);
-            };
-            reader.readAsText(file);
+        // 删除所有卡片
+        function clearAllCards() {
+            contentArea.innerHTML = '';
+            cardCounter = 0;
+            updateFileCount();
+            showEmptyState();
+        }
+
+        // ========== 事件监听 ==========
+        btnAdd.addEventListener('click', () => {
+            if (document.querySelector('.empty-text')) {
+                contentArea.innerHTML = '';
+            }
+            addCard();
         });
 
-        // 清空按钮逻辑
-        btnClear.addEventListener('click', () => {
-            fileUpload.value = ''; // 彻底清除上传记录
-            currentFileName = "";
-            isFileLoaded = false;
-            updateInterface(); // 刷新界面回到欢迎状态
-        });
+        btnClearAllContent.addEventListener('click', clearAllCardsContent);
 
-        // 语言切换逻辑
+        btnClearAll.addEventListener('click', clearAllCards);
+
         langSelect.addEventListener('change', (e) => {
             currentLang = e.target.value;
             localStorage.setItem('md-viewer-lang', currentLang);
-            updateInterface();
+            updateUILanguage();
         });
 
-        // 页面启动
-        updateInterface();
+        // 处理 bfcache 返回
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                contentArea.innerHTML = '';
+                cardCounter = 0;
+                updateUILanguage();
+                showEmptyState();
+            }
+        });
+
+        // ========== 初始化 ==========
+        updateUILanguage();
+        showEmptyState();
     </script>
 </body>
 </html>
