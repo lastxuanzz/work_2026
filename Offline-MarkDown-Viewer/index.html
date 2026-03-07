@@ -226,6 +226,11 @@
             });
 
             updateFileCount();
+
+            // 如果当前没有卡片，更新空状态欢迎语
+            if (document.querySelectorAll('.file-card').length === 0) {
+                showEmptyState();
+            }
         }
 
         function updateFileCount() {
