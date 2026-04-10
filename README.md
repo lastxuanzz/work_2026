@@ -1,8 +1,8 @@
 # work_2026
 对于EC2中的安全组字段，<br>
 要创建两个<br>
-1.安全组，类型：List Collector<br>
-2.安全组_temp，类型：Select Box<br>
+1.安全组，类型：List Collector 👉 这是实际要使用的变量，plan或apply时要用<br>
+2.安全组_temp，类型：Select Box 👉 这是辅助用的变量，仅仅是为了给上述的变量赋值用<br>
 <br>
 对于1.安全组，在Type Specifications，[List table]选择Question Choice，<br>
 Reference qualifier中写： question=__sys_id__<br>
