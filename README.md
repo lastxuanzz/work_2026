@@ -5,8 +5,8 @@
 2.安全组_temp，类型：Select Box 👉 这是辅助用的变量，仅仅是为了给上述的变量赋值用<br>
 <br>
 对于1.安全组，在Type Specifications，[List table]选择Question Choice，<br>
-Reference qualifier中写： question=__sys_id__<br>
-上述__sys_id__的值为2.安全组_temp的sysid,这保证页面中1.安全组的下拉框是空的，不能出现无关的值<br>
+Reference qualifier中写： question=*sys_id*<br>
+上述*sys_id*的值为2.安全组_temp的sysid,这保证页面中1.安全组的下拉框是空的，不能出现无关的值<br>
 
 <br>
 2.安全组_temp 绑定onChange事件（对于变量集）<br>
