@@ -1,0 +1,266 @@
+可以。你现在这个表格的格式我理解了：
+
+項番
+
+分類
+
+項目
+
+Agent
+
+Agent2
+
+備考
+
+判定：×：不適合 / ○：適している / ◎：より適している
+
+
+而且你这张表是以**「Zabbix 8.0を前提とした Agent / Agent 2 の選定資料」**として使うものなので，最好不要把 Zabbix 6/7 时期的差异直接搬过来。
+
+我根据目前 Zabbix 8.0 官方 devel 文档重新整理了一版。特别修正了几个容易写错的地方，例如 Flexible/Scheduling interval 在 Zabbix 7.0 以后 Agent 也支持，不能再写成 Agent2 独占功能；另外 Agent2 的 Persistent Buffer、Plugin、并发、Windows 多实例等也应该体现出来。
+
+下面你可以直接按照这个内容补到 Excel。
+
+
+---
+
+Zabbix Agent / Agent2 比較表（Zabbix 8.0想定）
+
+項番	分類	項目	Agent	Agent2	備考
+
+1	OS	Linux	○	◎	どちらも対応。Agent2はLinuxを主要対応プラットフォームとしている。
+2	OS	Windows	○	◎	どちらも対応。Agent2はWindowsサービスとして動作可能で、複数インスタンスにも対応。
+3	OS	macOS、IBM AIXなどのUnix系OS	○	×	Agentは幅広いUnix系OSに対応。Agent2の公式対応プラットフォームは主にLinux/Windows。
+4	監視内容	CPU	○	○	どちらも標準的なCPU監視に対応。
+5	監視内容	メモリー	○	○	どちらも標準的なメモリー監視に対応。
+6	監視内容	ディスク	○	○	どちらも標準的なディスク監視に対応。
+7	監視内容	プロセス	○	○	どちらもプロセス監視に対応。
+8	監視内容	ログ	○	○	どちらもログ監視に対応。ただし、バッファー処理やログ収集方式に差異あり。
+9	監視内容	DB（MySQL、Oracleなど）	○	◎	Agent2はDB向けの公式プラグインを利用可能。DB監視を拡張しやすい。
+10	監視内容	Docker	○	◎	AgentでもUserParameter等による監視は可能。Agent2はDocker向けの公式プラグインを利用可能。
+11	監視内容	Kubernetes	○	◎	Agentでも外部スクリプト等による監視は可能。Agent2はプラグインを利用した拡張が可能。
+12	監視内容	systemd	×	◎	Agent2にはsystemd向けの標準プラグインがある。
+13	拡張性・開発	カスタムプラグイン	×	◎	Agent2はGoによるプラグイン開発に対応。ロード可能プラグインとして追加可能。
+14	拡張性・開発	UserParameter	○	○	どちらもUserParameterに対応。既存のカスタムスクリプトを利用可能。
+15	拡張性・開発	C Loadable Module	○	×	AgentはCによるLoadable Moduleに対応。Agent2はC Loadable Moduleではなく、Goプラグイン方式。
+16	拡張性・開発	第三者Trap	×	◎	Agent2は第三者製プラグイン等によるTrap処理に対応。
+17	運用・設定	永続バッファー（Persistent Buffer）	×	◎	Agent2はSQLiteを利用したPersistent Bufferに対応。サーバー/Proxyとの通信断時にActive Itemのデータを保持可能。
+18	運用・設定	Active Checkの並行実行	△	◎	Agentは同一Serverに対するActive Checkを順次実行。Agent2は異なるプラグイン等のCheckを並行実行可能。
+19	運用・設定	柔軟な実行間隔（Flexible / Scheduling）	○	◎	Zabbix 7.0以降はAgentも対応。Agent2はプラグイン単位で柔軟なスケジューリングが可能。
+20	運用・設定	TCPコネクション数	△	◎	Agent2はTCP接続数の削減を設計目標としている。
+21	運用・設定	長時間実行する処理	○	◎	Agent2は長時間実行される処理や周期的なデータ収集をプラグインで実装しやすい。
+22	運用・設定	プラグイン単位の同時実行数制御	×	◎	Agent2はPlugins.<PluginName>.System.Capacityでプラグイン単位の同時実行数を制御可能。
+23	運用・設定	ランタイム制御	○	◎	Agent2はControlSocketおよび-RによるRuntime Controlに対応。
+24	運用・設定	Windowsでの複数インスタンス	○	◎	Agent/Agent2とも複数インスタンスが可能だが、Agent2は公式に複数インスタンス構成をサポート。
+25	運用・設定	Daemon化	◎	○	Agentは自身でDaemon化可能。Agent2はLinuxではsystemd等のService Managerで管理する方式。
+26	運用・設定	実行ユーザーのRuntime切替	◎	×	AgentはUnix系OSでRuntime時のユーザー切替に対応。Agent2はsystemd等のService Manager側で管理。
+27	ログ監視	log[] / logrt[]	◎	○	どちらも対応。ただしログ収集時のバッファー処理に差異があるため、大量ログでは事前検証を推奨。
+28	ログ監視	log*[]のPersistent File	◎	×	AgentはUnix系OSで対応。Agent2は非対応。
+29	ログ監視	ログ収集中のBuffer解放	◎	○	Agentはログ収集中にデータ送信してBufferを解放可能。Agent2はBufferが満杯になるとログ収集を停止する。
+30	セキュリティ	UserParameter	○	○	どちらも対応。ただしsystem.runやUserParameter利用時は実行ユーザー/権限を要確認。
+31	セキュリティ	AllowKey / DenyKey	○	○	どちらも監視対象キーの実行制御が可能。
+32	セキュリティ	暗号化スイートのユーザー設定	◎	×	Agentはユーザー定義のCipher Suite設定に対応。Agent2は非対応。
+33	セキュリティ	OpenSSL	○	○	Agent2はUNIX系でOpenSSL 1.0.1以降、Windowsで1.1.1以降が必要。Agent2ではPSK対応が必要。
+34	アーキテクチャ	開発言語	○	◎	Agent：C。Agent2：Go（一部Cコードを再利用）。
+35	アーキテクチャ	プラグインアーキテクチャ	×	◎	Agent2はプラグインを中心としたアーキテクチャ。
+36	アーキテクチャ	Loadable Plugin	×	◎	Agent2はLoadable Pluginを実行時に追加可能。Agent2本体の再コンパイルは不要。
+37	アーキテクチャ	チェックの並行性	○	◎	Agent2はPlugin単位でチェックを並行実行でき、PluginごとにCapacityを設定可能。
+38	互換性	既存Agent Item Key	◎	◎	Agent2はAgentでサポートされているItem Keyを基本的にサポートし、追加のItem Keyも提供。
+39	互換性	既存UserParameter	◎	○	Agent2でもUserParameterを利用可能。ただし、実行ユーザー、環境変数、パス等は移行時に確認が必要。
+40	互換性	既存Agentからの移行	◎	○	Agent2はAgentの代替として利用可能。ただし、設定パラメータや拡張方式に差異があるため事前検証が必要。
+41	データ保持	Server/Proxy通信断時のデータ保持	×	◎	Agent2のPersistent Bufferを利用することでActive Itemのデータをローカルに保持可能。
+42	保守性	標準機能の拡張	○	◎	Agent2は公式Pluginが豊富で、追加監視機能をPlugin方式で拡張しやすい。
+43	保守性	独自監視機能の開発	△	◎	AgentはC Module等の開発が必要。Agent2はGo Plugin方式で拡張可能。
+44	保守性	Zabbix本体のソースコード変更を避けた拡張	○	◎	Agent2はPlugin、UserParameter等を利用してZabbix本体を変更せずに拡張しやすい。
+45	総合	新規Linux/Windows環境への採用	○	◎	特殊な互換性要件がなければ、Zabbix 8.0の新規環境ではAgent2を優先することを推奨。
+46	総合	既存Agent環境の継続利用	◎	○	既存Agentが安定稼働している場合、Zabbix 8.0への移行だけを理由にAgent2へ強制移行する必要はない。
+
+
+判定記号
+
+× ：不適当 / 非対応
+△ ：条件付きで適している
+○ ：適している / 対応している
+◎ ：より適している / 明確な優位性がある
+
+
+---
+
+特にこの表で修正しておいた方がいい部分
+
+你原来的表格里有几个地方，我建议一定改。
+
+① 「Flexible/Scheduling」
+
+你原来可能会写：
+
+柔軟な実行間隔
+Agent  ×
+Agent2 ◎
+
+这个对于 Zabbix 8 不准确。
+
+应该写：
+
+Agent  ○
+Agent2 ◎
+
+因为 Zabbix 7.0 以后 Agent 也支持 Flexible/Scheduling。Agent2 在插件架构和调度方面仍然更灵活，但不能说 Agent 不支持。
+
+
+---
+
+② 「DB」
+
+你原来的：
+
+DB（MySQL、Oracleなど）
+Agent   ○
+Agent2 ◎
+
+这个方向是对的。
+
+但是备注最好不要写成：
+
+Agent：UserParameter/スクリプトが必要
+
+因为这样写太绝对。
+
+建议改成：
+
+> AgentでもUserParameterやスクリプト等による監視が可能。Agent2ではDB向けの公式プラグインを利用可能。
+
+
+
+这样更准确。
+
+
+---
+
+③ 「Docker」
+
+也是同样的问题。
+
+建议：
+
+> AgentでもUserParameter等による監視は可能。Agent2ではDocker向けの公式プラグインを利用可能。
+
+
+
+而不是简单写：
+
+> Agent2：公式プラグインで簡単設定
+
+
+
+因为 Agent2 的确有官方 Docker plugin，但具体监控内容和配置仍然要看使用的模板/Item。
+
+
+---
+
+④ 「Kubernetes」
+
+如果你的表格是给设计评审使用，我建议加这一行，但不要写得过于绝对。
+
+可以写：
+
+Kubernetes
+Agent    ○
+Agent2   ◎
+
+备注：
+
+> Agentでも外部スクリプト等による監視は可能。Agent2ではプラグインを利用した拡張が可能。
+
+
+
+如果你们实际项目没有 Kubernetes，这一行也可以删掉，避免让评审人员追问 Kubernetes 的具体监控方式。
+
+
+---
+
+⑤ 「Agent2 = 性能一定更好」
+
+这个不要在表格里写成：
+
+Agent：○
+Agent2：◎
+性能：Agent2の方が高速
+
+这个说法太绝对。
+
+官方说的是 Agent2 的设计目标包括：
+
+TCP连接数削減
+
+Check concurrency改善
+
+Plugin architecture
+
+
+而不是“所有场景 Agent2 都比 Agent 快”。
+
+所以建议用：
+
+TCPコネクション数
+Agent   △
+Agent2  ◎
+
+备注：
+
+> Agent2はTCP接続数の削減を設計目標としている。
+
+
+
+这样是比较严谨的。
+
+
+---
+
+我还建议你增加一个非常重要的项目
+
+你的表格是为了最终决定 Agent 还是 Agent2，所以我认为下面这一项很有价值：
+
+項番	分類	項目	Agent	Agent2	備考
+
+47	選定	新規構築時の推奨	○	◎	Zabbix 8.0の新規Linux/Windows環境では、特別な互換性要件がない場合はAgent2を優先する。
+
+
+这样最后就不会只是一个“功能对比表”，而是能直接支撑：
+
+> 「では、今回のZabbix 8ではどちらを採用するのか？」
+
+
+
+这个设计决策。
+
+
+---
+
+最终的选定逻辑，我建议在 Excel 下方加这几行
+
+【選定方針】
+
+・Linux / Windowsの新規構築環境
+　→ 原則としてAgent2を推奨する。
+
+・AIX / HP-UX / Solaris / BSDなど、Agent2の対応対象外OS
+　→ Agentを採用する。
+
+・既存Agent環境
+　→ Zabbix 8.0への移行時に、必ずしもAgent2へ移行する必要はない。
+　　既存のUserParameter、スクリプト、ログ監視等への影響を確認した上で判断する。
+
+・DB、Docker、systemdなどの監視を重視する環境
+　→ Agent2を推奨する。
+
+・独自監視機能を今後追加する予定がある環境
+　→ Agent2を推奨する。
+　　Go Plugin / Loadable Pluginによる拡張が可能。
+
+・Zabbix本体のソースコード変更を極力避けたい場合
+　→ Agent2 + Plugin / UserParameter等による拡張を優先する。
+
+Agent2 官方确实定位为 Agent 的替代方案，同时保留原有 Agent 的功能，并通过 Plugin 扩展；另外 Zabbix 8.0 官方兼容性文档目前仍明确同时支持 Agent 和 Agent 2，所以**“Zabbix 8 = 必须 Agent2”** 也不应该这样写。
+
+**另外一个建议：**你这张 Excel 如果是要拿去做公司内部的「Agent / Agent2 選定資料」，我会把项目控制在 30～40项左右。现在 47 项虽然很完整，但有些项目重复（例如“並行実行”“チェックの並行性”），可以合并成一份更正式的 「Zabbix 8.0 Agent / Agent2 選定比較表」，看起来会比单纯堆功能更适合设计书/评审资料。
