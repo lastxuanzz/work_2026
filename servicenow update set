@@ -1,0 +1,509 @@
+我查阅了 ServiceNow 官方文档和 ServiceNow Community 论坛中关于 Update Set（更新集）的最佳实践。
+
+先说结论：你的整体思路有一定合理性，但有两个地方建议调整。
+
+1. 不要把 Default Update Set 当作日常测试专用的更新集。 如果你们项目组规定必须在 Default 更新集中进行测试，需要区分测试操作和会产生配置变更的操作。
+
+
+2. 更新集完成后，不建议反复打开、关闭同一个更新集来迭代开发。 更推荐每次修正都使用新的更新集，并按顺序迁移、测试和发布。
+
+
+
+另外，你们现在只有开发环境和生产环境，还是还有独立的测试环境？这会影响最佳实践的具体实施方式。
+
+下面我结合官方文档，逐步分析你的操作流程。
+
+一、首先确认：你现在的流程有哪些问题？
+
+你描述的流程是：
+
+步骤	操作	我的评价
+
+1	新建更新集，并将其设为当前更新集	✅ 正确
+2	在更新集中修改代码、配置等	✅ 正确
+3	切换到 Default 更新集，在这里进行测试	⚠️ 需要区分测试类型
+4	测试有问题，切回原更新集继续修改	⚠️ 可以实现，但要注意更新集的记录机制
+5	测试通过后，将原更新集设为 Complete	✅ 正确，但前提是所有修改已经完成
+6	导出更新集，作为 Release 发布	✅ 基本正确，但还需要检查依赖项和遗漏的配置
+
+
+其中，第 3 步是最值得讨论的地方，第 4 步则需要注意修改记录是否被正确捕获。
+
+
+---
+
+二、ServiceNow 官方推荐的 Update Set 最佳实践
+
+1. 官方推荐的更新集迁移路径
+
+ServiceNow 官方文档建议建立标准的更新集迁移路径，例如：
+
+Development → Test → Production
+
+也就是：
+
+开发环境 → 测试环境 → 生产环境。
+
+官方还建议：
+
+每个小型或中型任务使用独立的更新集。
+
+使用有意义的名称，明确更新集对应的任务或问题单。
+
+在迁移前检查更新集的内容。
+
+提交更新集之前执行 Preview，检查潜在冲突。
+
+更新集一旦设置为 Complete，就不应该再改回 In Progress；后续修正应创建新的更新集。
+
+如果测试环境发现问题，应在开发环境中创建新的修正更新集，并按正确顺序迁移。
+
+
+官方文档：
+
+[ServiceNow 官方文档：General guidelines for planning the update process](https://www.servicenow.com/docs/r/application-development/system-update-sets/get-started-update-sets.html?utm_source=chatgpt.com)
+
+[ServiceNow 官方文档：Get started with update sets](https://www.servicenow.com/docs/r/yokohama/application-development/system-update-sets/get-started-update-sets.html?utm_source=chatgpt.com)
+
+[ServiceNow 官方文档：Mark an update set complete](https://www.servicenow.com/docs/r/application-development/system-update-sets/t_CompleteUpdateSets.html?utm_source=chatgpt.com)
+
+
+这里有一点需要注意：官方文档描述的是典型的开发、测试、生产流程。你的项目要求在 Default 更新集中进行测试，并不完全等同于官方推荐的跨环境测试流程。
+
+2. 为什么官方建议使用多个更新集，而不是反复修改同一个更新集？
+
+举个例子。
+
+假设你要开发一个 Service Portal 功能。
+
+第一次开发：
+
+APP001 - Portal Development
+
+开发完成后，测试发现 JavaScript 有问题。
+
+按照官方推荐的思路，可以创建：
+
+APP002 - Portal Fix 01
+
+修正完成后，再创建：
+
+APP003 - Portal Fix 02
+
+如果这些更新集都需要发布，就按照依赖关系和创建顺序进行处理。
+
+例如：
+
+开发环境
+    |
+    |-- APP001 - Portal Development
+    |
+    |-- APP002 - Portal Fix 01
+    |
+    |-- APP003 - Portal Fix 02
+    |
+    v
+目标环境
+    |
+    |-- Preview APP001
+    |-- Commit APP001
+    |
+    |-- Preview APP002
+    |-- Commit APP002
+    |
+    |-- Preview APP003
+    |-- Commit APP003
+
+这样做的好处是：
+
+每次修正都有独立记录。
+
+可以追踪每次修改的目的。
+
+审查和发布时更容易确认修改内容。
+
+如果前一个更新集已经迁移到其他环境，不需要重新打开它。
+
+
+需要注意的是，这并不意味着每修改一行代码就必须创建一个更新集。更合理的粒度是按照功能、任务或问题单划分。
+
+官方也明确指出，如果某个更新集已经提交到测试环境，之后发现问题，应该在开发环境创建新的修正更新集，并将原更新集和修正更新集按顺序提交到后续环境。
+
+参考：
+
+[ServiceNow 官方文档：Get started with update sets](https://www.servicenow.com/docs/r/yokohama/application-development/system-update-sets/get-started-update-sets.html?utm_source=chatgpt.com)
+
+[ServiceNow Community：Best practices for Update Sets](https://www.servicenow.com/community/itsm-forum/best-practices-for-update-sets/td-p/783327?utm_source=chatgpt.com)
+
+
+
+---
+
+三、重点讨论：在 Default Update Set 中进行测试，到底有没有问题？
+
+你特别提到：
+
+> 我们的项目组要求，要在 Default 更新集中进行测试。
+
+
+
+这个要求需要结合实际操作来判断。
+
+1. 首先明确 Default Update Set 的用途
+
+ServiceNow 官方文档对 Global Default Update Set 的说明是：
+
+它用于在不将修改记录到用户自定义更新集中的情况下，对实例进行修改。
+
+同时，官方明确建议：
+
+不要修改 Global Default Update Set 的系统用途。
+
+不要删除它。
+
+不要将它迁移到其他实例。
+
+不要对它执行 Back Out。
+
+
+参考官方文档：
+
+[ServiceNow 官方文档：Default update set](https://www.servicenow.com/docs/r/application-development/system-update-sets/default-update-sets.html?utm_source=chatgpt.com)
+
+社区中也有明确的建议：Default 更新集可以作为没有指定自定义更新集时的默认记录位置，但不应该作为日常迁移配置的主要更新集。
+
+参考：
+
+[ServiceNow Community：Best practices for Update Sets](https://www.servicenow.com/community/developer-forum/best-practice-never-assign-a-default-update-set-as-an-update-set/m-p/2159061?utm_source=chatgpt.com)
+
+不过，这里需要区分两个概念：
+
+Default 更新集并不是一个完全不能操作的区域，而是不应该被当作正常的功能开发和发布更新集来使用。
+
+2. 如果你说的测试只是验证功能，通常没有问题
+
+例如，你已经在自定义更新集中完成了代码修改，然后：
+
+1. 切换到 Default 更新集。
+
+
+2. 打开 Service Portal 页面。
+
+
+3. 提交一个测试申请。
+
+
+4. 确认申请是否成功。
+
+
+5. 检查页面显示是否正确。
+
+
+
+如果这些操作只是运行已经部署的功能，没有修改需要迁移的配置，那么通常没有问题。
+
+因为你只是在验证功能，而不是继续开发。
+
+不过，需要特别注意：
+
+测试操作不一定完全没有副作用。
+
+例如：
+
+提交 Catalog Item，可能产生新的 Request、RITM 等业务数据。
+
+测试通知功能，可能向用户发送邮件。
+
+测试 Flow，可能触发其他业务处理。
+
+某些测试可能间接修改系统配置或产生需要清理的数据。
+
+
+这些都需要结合测试环境的具体配置判断。
+
+3. 如果测试过程中需要修改代码或配置，就需要谨慎
+
+假设你在自定义更新集中完成了开发：
+
+APP001 - Portal Development
+
+然后切换到 Default 更新集。
+
+你在这里测试时发现：
+
+Client Script 需要修改。
+
+Business Rule 需要修改。
+
+Widget 需要修改。
+
+UI Policy 需要调整。
+
+
+这时，如果你直接修改这些配置，相关修改可能被记录在 Default 更新集中，而不是原来的 APP001 中。
+
+结果就可能出现：
+
+自定义更新集 APP001
+    |
+    |-- 第一次开发的代码
+    |
+    |-- 缺少后续修正
+    |
+    v
+Default Update Set
+    |
+    |-- 测试时修改的代码
+    |
+    |-- 测试时修改的配置
+
+最终你导出 APP001 时，可能没有包含所有必要修改。
+
+这正是需要避免的情况。
+
+因此，你的第 4 步虽然可以切回原更新集继续修改，但切换更新集本身并不会自动把此前记录在 Default 更新集中的修改转移过去。
+
+如果已经误记录在 Default 更新集中，ServiceNow 官方建议不要直接手动修改 Customer Update 记录中的 Update Set 字段来转移修改。更稳妥的处理方式是切换到目标更新集，对相应配置进行一次修改、保存，再撤销这次临时修改并保存，以确保目标更新集捕获到最新版本。
+
+参考：
+
+[ServiceNow 官方文档：Get started with update sets](https://www.servicenow.com/docs/r/yokohama/application-development/system-update-sets/get-started-update-sets.html?utm_source=chatgpt.com)
+
+实际操作前，建议先确认你们使用的是 Global 应用范围，还是 Scoped Application，因为具体的更新集选择和记录行为可能有所不同。
+
+
+---
+
+四、结合你们项目组的要求，我建议采用什么流程？
+
+假设你们的实际情况是：
+
+开发环境和生产环境各一套。
+
+新建应用时，先通过 XML 导入到生产环境。
+
+后续功能修改使用 Update Set。
+
+项目组规定在 Default 更新集中进行测试。
+
+最终由开发人员导出更新集，再进行发布。
+
+
+在这些前提下，我建议把开发、测试和发布分开管理。
+
+推荐流程
+
+第 1 步：创建专用更新集
+
+例如：
+
+APP001 - Feature A
+
+确认当前应用范围和更新集都正确，再开始修改。
+
+第 2 步：进行开发
+
+在 APP001 中完成：
+
+代码修改。
+
+配置修改。
+
+功能实现。
+
+
+开发过程中，定期检查更新集中的 Customer Updates，确认必要的修改已经被捕获。
+
+第 3 步：切换到 Default 更新集进行测试
+
+按照项目组要求，切换到 Default 更新集。
+
+在这里执行：
+
+页面操作测试。
+
+功能测试。
+
+业务流程测试。
+
+数据处理结果验证。
+
+
+但需要注意，切换到 Default 更新集并不意味着自动创建了一个独立的测试环境。你仍然是在同一个 ServiceNow 实例上测试。
+
+第 4 步：发现问题后，切回专用更新集修正
+
+如果测试发现问题：
+
+1. 切回 APP001。
+
+
+2. 修改代码或配置。
+
+
+3. 保存修改。
+
+
+4. 再切换到 Default 更新集。
+
+
+5. 重新测试。
+
+
+
+这里有一个前提：所有需要发布的修改，都必须被正确记录在专用更新集内。
+
+如果某项配置此前已经在 Default 更新集中修改过，不能仅仅因为切回 APP001 就认为它已经进入 APP001。
+
+需要检查更新集内容，并按照官方建议的方式，确保最新修改被记录在正确的更新集中。
+
+第 5 步：测试通过后，检查更新集内容
+
+这一步非常重要。
+
+建议检查：
+
+是否包含所有必要的代码和配置。
+
+是否遗漏 Script Include、Business Rule、Client Script、ACL 等依赖项。
+
+是否包含不应该发布的修改。
+
+是否存在更新集冲突。
+
+是否有需要手动执行的后续操作。
+
+
+如果发现还需要修正，可以继续使用当前尚未完成的更新集。
+
+如果更新集已经 Complete，则应该创建新的修正更新集，而不是重新打开旧更新集。
+
+第 6 步：将更新集设置为 Complete
+
+确认功能已经完成，并且更新集内容检查通过后，再设置为 Complete。
+
+这意味着该更新集已经准备好进行迁移，不应该再继续向其中记录新的开发修改。
+
+第 7 步：导出更新集
+
+导出 XML 文件，交给发布流程。
+
+但导出并不代表发布工作已经全部完成。
+
+还需要确认：
+
+更新集之间的依赖关系。
+
+发布顺序。
+
+需要手动迁移的数据或配置。
+
+目标环境的版本兼容性。
+
+
+第 8 步：在目标环境进行 Preview 和 Commit
+
+如果你们是从开发环境导出 XML，再导入生产环境，那么导入后不要直接提交。
+
+建议：
+
+1. 导入更新集。
+
+
+2. 执行 Preview。
+
+
+3. 检查冲突和潜在问题。
+
+
+4. 处理冲突。
+
+
+5. 确认无误后执行 Commit。
+
+
+6. 验证发布结果。
+
+
+
+官方明确建议在提交更新集之前执行 Preview。
+
+参考：
+
+[ServiceNow 官方文档：Get started with update sets](https://www.servicenow.com/docs/r/yokohama/application-development/system-update-sets/get-started-update-sets.html?utm_source=chatgpt.com)
+
+[ServiceNow 官方文档：Update set transfers](https://www.servicenow.com/docs/r/yokohama/application-development/system-update-sets/update-set-transfers.html?utm_source=chatgpt.com)
+
+
+
+---
+
+五、我建议你们额外注意的几个问题
+
+1. 不要把 Default 更新集导出作为正式发布方式
+
+Default 更新集可能包含其他临时修改或非预期的配置变更。
+
+所以，你们正式发布时，应该始终以专用更新集为准。
+
+2. 如果已经导入生产环境，后续要注意应用范围
+
+你提到，新建应用时先通过 XML 导入生产环境，后续更新再使用 Update Set。
+
+这种方式是否合适，需要看你们的应用是 Global Application 还是 Scoped Application，以及 XML 导入的具体对象是什么。
+
+对于 Scoped Application，ServiceNow 还提供 Application Repository 等应用分发方式。官方指出，Update Set 并不是安装应用的通用替代方案。
+
+参考：
+
+[ServiceNow 官方文档：Get started with update sets](https://www.servicenow.com/docs/r/zurich/application-development/system-update-sets/get-started-update-sets.html?utm_source=chatgpt.com)
+
+如果你们的项目已经确定采用 XML + Update Set 的方式，也不意味着必须马上改变现有流程，但建议确认它是否适合你们应用的交付模式。
+
+3. 如果没有独立测试环境，Default 更新集并不能代替测试环境
+
+这一点尤其重要。
+
+假设你们只有开发和生产两套实例：
+
+开发环境
+  |
+  |-- 专用更新集开发
+  |
+  |-- Default 更新集测试
+  |
+  |-- 导出更新集
+  |
+  v
+生产环境
+
+在开发环境中切换更新集，只是改变后续修改的记录位置，并不会创建新的实例，也不会隔离业务数据。
+
+所以，测试可能影响开发环境中已有的数据、业务流程或通知配置。
+
+如果你们有独立测试环境，最好先在测试环境验证更新集，再迁移到生产环境。
+
+
+---
+
+六、最终结论
+
+我认为，你现在的流程不需要全部推翻，但应该重点调整以下几个方面。
+
+项目	建议
+
+新建专用更新集进行开发	保留
+在 Default 更新集中测试	可以遵守项目组要求，但应明确测试范围
+测试过程中修改配置	修改后必须确认是否被正确记录在专用更新集中
+反复切换更新集	可以，但要检查修改的归属
+测试通过后关闭更新集	保留，但应先检查更新集内容
+Complete 后继续修改	不建议，应创建新的修正更新集
+导出 XML 发布	可以，但发布前还要检查依赖和冲突
+生产环境导入后直接提交	不建议，应先 Preview 再 Commit
+
+
+我最建议你们建立的一条规则是：Default 更新集可以用于项目组规定的测试操作，但所有需要发布的代码和配置，都必须明确归属于专用更新集。
+
+这样既能遵守项目组的测试要求，也能避免最终导出的更新集缺少必要修改。
+
+如果你们希望进一步规范流程，我建议再明确一个问题：你们在 Default 更新集中进行的测试，究竟是只执行功能测试，还是也会在 Default 更新集中直接修改代码和配置？这两种情况的处理方式差别很大。
